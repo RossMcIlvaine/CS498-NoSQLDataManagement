@@ -1,0 +1,21 @@
+Average Latency Measurements:
+US Server:
+Register: 0.5183694124221802 seconds
+List: 0.11417686939239502 seconds
+
+EU Server:
+Register: 1.0014374732971192 seconds
+List: 0.40115880966186523 seconds
+
+Consistency Measurement:
+We missed the username 0 times.
+
+Analysis:
+During the measurements, the latency between the US and EU servers differed significantly. In my tests, the EU server typically took almost twice as long to perform the register or list endpoints.
+Interestingly, that difference in latency only appeared when I ran my script on my local machine. Originally, when running the program on Google Colab, I saw almost no difference in latency.
+I believe this is due to Google's servers doing their best to route my script through servers closest to the IP location and optimizing them automatically. The difference when running the script locally is due to
+the distance between the machine and the server with the endpoints. In the case of the EU server, the signals have a longer distance to travel to retrieve data.
+
+For the consistency experiment, I found that the servers handled consistency incredibly well. My script returned zero missed usernames when running 100 times, and I even ran it with 1000 attempts instead and still found it to be 100% consistent.
+I think this speaks to the speed of Google's infrastructure. I expected there to be a few missed names, but I think this lack of errors may just be due to the small sample size. Perhaps on the scale of tens of thousands or millions of requests we would
+begin to see some misses, but this is a bit difficult to try on our terms.
