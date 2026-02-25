@@ -1,0 +1,117 @@
+// The following is my implementation of the server code. This is where I defined the endpoints.
+const {Datastore} = require("@google-cloud/datastore");
+const express = require('express');
+const app = express();
+const datastore = new Datastore();
+
+app.use(express.json());
+
+app.get('/greeting', (req, res) => {
+  res.send(`
+    <html>
+      <body>
+        <h1>Hello World!</h1>
+      </body>
+    </html>
+  `);
+});
+
+app.post("/register", async (req, res) => {
+  const username = req.body.username;
+  const userKey = datastore.key(["User", username]);
+  await datastore.save({
+    key: userKey,
+    data: { username: username },
+  });
+  res.status(200).json({ message: "User registered" });
+});
+
+app.get("/list", async (req, res) => {
+  const query = datastore.createQuery("User");
+  const [users] = await datastore.runQuery(query);
+  const usernames = users.map((user) => user.username);
+  res.json({ users: usernames });
+});
+
+app.post("/clear", async (req, res) => {
+  const query = datastore.createQuery("User");
+  const [users] = await datastore.runQuery(query);
+  const keys = users.map((user) => user[datastore.KEY]);
+  if (keys.length > 0) {
+    await datastore.delete(keys);
+  }
+  res.status(200).json({ message: "Cleared" });
+});
+
+app.listen(8080, '0.0.0.0', () => {
+  console.log(`Server running on port 8080`);
+});
+
+// This is the script I used to send the requests to the two servers to test latency
+import requests
+import time
+import statistics
+import random
+import string
+
+// Set IP addresses
+US_link = "http://34.55.15.206:8080"
+EU_link = "http://34.76.124.19:8080"
+
+NUM_REQ = 10
+
+// Laterncy test function
+def calculate_latency(address, method, endpoint, server=""):
+  latency= []
+
+  for i in range(NUM_REQ):
+    start = time.time()
+
+    if method == "post":
+      requests.post(f"{address}{endpoint}", json={"username": f"test_user_{server}_{i}"})
+    else:
+      requests.get(f"{address}{endpoint}")
+
+    end = time.time()
+    latency.append(end - start)
+  
+  return statistics.mean(latency)
+
+// Print results
+print("US Server Measurements:")
+print(f"Register: {calculate_latency(US_link, 'post', '/register', "US")}")
+print(f"List: {calculate_latency(US_link, 'get', '/list')}")
+
+print("EU Server Measurements:")
+print(f"Register: {calculate_latency(EU_link, 'post', '/register', "EU")}")
+print(f"List: {calculate_latency(EU_link, 'get', '/list')}")
+
+// Clear database (in case the bloat might affect the next test
+requests.post(f"{US_link}/clear")
+requests.post(f"{EU_link}/clear")
+
+// Consistency tests
+
+// Generate random name to POST
+def generate_random_name():
+  length = random.randint(4, 8)
+  return ''.join(random.choice(string.ascii_letters) for _ in range(length))
+
+// Run test
+missed_posts = 0
+
+// Increased range to 1000 to see if it would return results
+for i in range(1000):
+  username = generate_random_name()
+  requests.post(f"{US_link}/register", json={"username": username})
+
+  results = requests.get(f"{EU_link}/list")
+  users = results.json()
+  for user in users.values():
+    if username not in user:
+      missed_posts += 1
+
+  # Clear the database (make sure that delay isn't caused by growing list of names)
+  requests.post(f"{US_link}/clear")
+
+print(f"Missed posts: {missed_posts}")
